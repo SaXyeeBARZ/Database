@@ -1,5 +1,35 @@
 {
-  "4593243925": 3000,
-  "1129384756": 7,
-  "9988776655": 1
+  "tokens": [
+    {
+      "token": "8758570928:AAGJs3DDeNWKadtIjkoIONAWQkfhl38D-Nc",
+      "password": "bok",
+      "reseller": "7629172970",
+      "reseller_name": "King Naren",
+      "status": "active",
+      "created_at": "2026-09-18T10:30:00.000Z",
+      "expired_at": "2026-12-18T10:30:00.000Z"
+    },
+    {
+      "token": "8987654321:BBJkLnMvPQ3wXyZabCdefGHiJkLmNopQrs",
+      "password": "VIP-BUYER-LEVEL1",
+      "reseller": "8812345678",
+      "reseller_name": "Partner A",
+      "status": "active",
+      "created_at": "2026-09-18T11:00:00.000Z",
+      "expired_at": "2026-12-18T11:00:00.000Z"
+    },
+    {
+      "token": "9111222333:CCKmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPq",
+      "password": "RESELLER-ACCESS-KEY",
+      "reseller": "8855566677",
+      "reseller_name": "Reseller B",
+      "status": "banned",
+      "created_at": "2026-09-17T08:00:00.000Z",
+      "expired_at": "2026-12-17T08:00:00.000Z",
+      "banned_at": "2026-09-18T09:00:00.000Z",
+      "banned_reason": "Melanggar aturan"
+    }
+  ],
+  "updated_at": "2026-09-18T12:00:00.000Z",
+  "version": "1.0"
 }
