@@ -19,11 +19,11 @@
       "expired_at": "2026-12-18T11:00:00.000Z"
     },
     {
-      "token": "9111222333:CCKmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPq",
-      "password": "RESELLER-ACCESS-KEY",
-      "reseller": "8855566677",
-      "reseller_name": "Reseller B",
-      "status": "banned",
+      "token": "8827058339:AAHu5Dmk2P1PQlSQdjywexAxo0kDym6tIrg",
+      "password": "zamsikma",
+      "reseller": "Nora",
+      "reseller_name": "Nora",
+      "status": "active",
       "created_at": "2026-09-17T08:00:00.000Z",
       "expired_at": "2026-12-17T08:00:00.000Z",
       "banned_at": "2026-09-18T09:00:00.000Z",
