@@ -28,6 +28,15 @@
       "expired_at": "2026-12-17T08:00:00.000Z",
       "banned_at": "2026-09-18T09:00:00.000Z",
       "banned_reason": "Melanggar aturan"
+    },
+    {
+      "token": "8907357976:AAG_w9eSC33oGlTwEDi0xbxI076JoBWvDrs",
+      "password": "zax",
+      "reseller": "Nora",
+      "reseller_name": "Nora",
+      "status": "active",
+      "created_at": "2026-09-17T08:00:00.000Z",
+      "expired_at": "2026-12-17T08:00:00.000Z"
     }
   ],
   "updated_at": "2026-09-18T12:00:00.000Z",
