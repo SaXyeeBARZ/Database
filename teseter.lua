@@ -62,7 +62,6 @@ local State = {
     ESP_Distance = true,
 
     AutoFarm = false,
-    AutoTP = false,
     PreviousESP = nil,
 
     Speed = 16,
@@ -84,9 +83,8 @@ local FlySwitches = {}
 local MainGui, LoadingGui, MainWindow, FlyPanel, FarmPanel, OpenButton, StatsHolder
 local FlyVelocity, FlyOrientation, FlyAttachment, FlyConnection
 local NoclipConnection, CachedSafeZone
-local FarmStatusText, FarmStatusDot, AutoTPSwitch
+local FarmStatusText, FarmStatusDot
 local FlyHold = false
-local AutoTPToken = 0
 
 local MAX_DISTANCE = 1000
 local SCAN_INTERVAL = 3
@@ -875,6 +873,31 @@ end
 
 local TargetCache = { Key = {}, Note = {}, Time = 0 }
 
+local function InSafeZone(part, zones)
+    -- inside an instance whose name contains "safezone"
+    local node = part
+    while node and node ~= Workspace do
+        if string.find(string.lower(node.Name), "safezone") then
+            return true
+        end
+        node = node.Parent
+    end
+
+    -- inside the bounding box of a safezone part
+    for _, zone in ipairs(zones) do
+        if zone.Parent then
+            local rel = zone.CFrame:PointToObjectSpace(part.Position)
+            local half = zone.Size / 2
+            if math.abs(rel.X) <= half.X + 2
+                and math.abs(rel.Y) <= half.Y + 6
+                and math.abs(rel.Z) <= half.Z + 2 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 local function RefreshTargets()
     if os.clock() - TargetCache.Time < 2 then return end
     TargetCache.Time = os.clock()
@@ -882,18 +905,31 @@ local function RefreshTargets()
     TargetCache.Note = {}
 
     local char = Character()
+    local zones = {}
+    local found = {}
+
     for _, inst in ipairs(Workspace:GetDescendants()) do
+        if inst:IsA("BasePart") and string.find(string.lower(inst.Name), "safezone") then
+            table.insert(zones, inst)
+        end
+
         if not (char and inst:IsDescendantOf(char)) then
             local cat = GetCategory(inst.Name)
             if cat and cat ~= "OPAH" then
                 local part = GetPart(inst)
                 if part then
-                    if string.find(cat, "KEY") then
-                        table.insert(TargetCache.Key, part)
-                    elseif string.find(cat, "NOTE") then
-                        table.insert(TargetCache.Note, part)
-                    end
+                    table.insert(found, { Part = part, Cat = cat })
                 end
+            end
+        end
+    end
+
+    for _, item in ipairs(found) do
+        if not InSafeZone(item.Part, zones) then
+            if string.find(item.Cat, "KEY") then
+                table.insert(TargetCache.Key, item.Part)
+            elseif string.find(item.Cat, "NOTE") then
+                table.insert(TargetCache.Note, item.Part)
             end
         end
     end
@@ -964,44 +1000,37 @@ local function SetFarmStatus(text, color)
     end
 end
 
-local function SetAutoTeleport(enabled)
-    State.AutoTP = enabled
-    AutoTPToken = AutoTPToken + 1
-    local id = AutoTPToken
+local TeleportBusy = false
 
-    if not enabled then
-        SetFarmStatus("Idle", C.Gray)
+local function SmartTeleport()
+    if TeleportBusy then return end
+
+    local root = Root()
+    if not root then
+        SetFarmStatus("Waiting for character", C.Gray)
+        Notify("Teleport", "Character belum siap.", "err")
         return
     end
 
-    SetFarmStatus("Searching...", C.Yellow)
+    TeleportBusy = true
+    TargetCache.Time = 0
 
-    task.spawn(function()
-        while State.AutoTP and id == AutoTPToken and MainGui and MainGui.Parent do
-            local root = Root()
+    local target = FindNearest("key")
+    local label = "Key"
 
-            if root then
-                local target = FindNearest("key")
-                local label = "Key"
+    if not target then
+        target = FindNearest("note")
+        label = "Note"
+    end
 
-                if not target then
-                    target = FindNearest("note")
-                    label = "Note"
-                end
+    if target then
+        root.CFrame = CFrame.new(target.Position + Vector3.new(0, 3, 0))
+        SetFarmStatus("Teleported to " .. label, C.Green)
+    else
+        SetFarmStatus("No key or note found", C.Yellow)
+    end
 
-                if target then
-                    root.CFrame = CFrame.new(target.Position + Vector3.new(0, 3, 0))
-                    SetFarmStatus("Heading to " .. label, C.Green)
-                else
-                    SetFarmStatus("No key or note found", C.Yellow)
-                end
-            else
-                SetFarmStatus("Waiting for character", C.Gray)
-            end
-
-            task.wait(1.2)
-        end
-    end)
+    task.delay(0.6, function() TeleportBusy = false end)
 end
 
 --==============================================================
@@ -1880,10 +1909,10 @@ local function Launch()
             RefreshESP()
 
             if FarmPanel then FarmPanel.Visible = true end
+            SetFarmStatus("Ready", C.Green)
             Notify("Auto Farm", "Farm panel opened.")
         else
-            SetAutoTeleport(false)
-            if AutoTPSwitch then AutoTPSwitch.Set(false, true) end
+            SetFarmStatus("Idle", C.Gray)
 
             if State.PreviousESP then
                 State.ESP_Opah = State.PreviousESP.Opah
@@ -2139,30 +2168,22 @@ local function Launch()
     Round(FarmStatusDot, 4)
     FarmStatusText = Text(StatusCard, "Idle", UDim2.fromOffset(32, 20), UDim2.new(1, -40, 0, 20), 12, C.White, BOLD)
 
-    -- auto teleport toggle
-    local AutoRow = New("Frame", {
+    -- auto teleport button (manual: one click = one teleport)
+    local AutoBtn = New("TextButton", {
         Size = UDim2.new(1, -32, 0, 58),
         Position = UDim2.fromOffset(16, 124),
+        Text = "",
+        AutoButtonColor = false,
         Parent = FarmPanel,
     })
-    Panelize(AutoRow, 12, 0.4)
-    MakeIcon("key", AutoRow, 22, C.Yellow, UDim2.fromOffset(14, 18))
-    Text(AutoRow, "Auto Teleport", UDim2.fromOffset(46, 10), UDim2.new(1, -110, 0, 20), 13, C.White, BOLD)
-    Text(AutoRow, "Key first, then Note", UDim2.fromOffset(46, 30), UDim2.new(1, -110, 0, 18), 10, C.Gray)
-
-    AutoTPSwitch = Switch(AutoRow, UDim2.new(1, -58, 0.5, -12), false, function(v)
-        SetAutoTeleport(v)
-    end)
-
-    local AutoHit = New("TextButton", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        Text = "",
-        Parent = AutoRow,
-    })
-    AutoHit.MouseButton1Click:Connect(function()
-        AutoTPSwitch.Set(not AutoTPSwitch.Get())
-    end)
+    Panelize(AutoBtn, 12, 0.4)
+    MakeIcon("key", AutoBtn, 22, C.Yellow, UDim2.fromOffset(14, 18))
+    Text(AutoBtn, "Auto Teleport", UDim2.fromOffset(46, 10), UDim2.new(1, -90, 0, 20), 13, C.White, BOLD)
+    Text(AutoBtn, "Key first, then Note", UDim2.fromOffset(46, 30), UDim2.new(1, -90, 0, 18), 10, C.Gray)
+    MakeIcon("arrow", AutoBtn, 16, C.Gray, UDim2.new(1, -32, 0.5, -8))
+    AutoBtn.MouseEnter:Connect(function() Tween(AutoBtn, 0.12, { BackgroundColor3 = Color3.fromRGB(205, 206, 212) }) end)
+    AutoBtn.MouseLeave:Connect(function() Tween(AutoBtn, 0.12, { BackgroundColor3 = C.White }) end)
+    AutoBtn.MouseButton1Click:Connect(SmartTeleport)
 
     -- safe zone button
     local SafeBtn = New("TextButton", {
@@ -2314,8 +2335,6 @@ local function Launch()
         State.Fly = false
         State.Noclip = false
         State.AutoFarm = false
-        State.AutoTP = false
-        AutoTPToken = AutoTPToken + 1
 
         ClearFly()
         local h = Humanoid()
